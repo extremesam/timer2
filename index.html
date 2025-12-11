@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tomato: '#ff6347',
+                        forest: '#228B22',
+                        gold: '#FFD700'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+        }
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .flip-card {
+            perspective: 1000px;
+        }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+        }
+        .flip-card.flipped .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+        }
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2">Pomodoro Timer</h1>
+            <p class="text-xl opacity-90">Boost your productivity with focused work sessions</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Timer Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-black bg-opacity-30 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
+                    <!-- Timer Display -->
+                    <div class="flex justify-center mb-8">
+                        <div class="relative w-64 h-64">
+                            <!-- Progress Ring -->
+                            <svg class="w-full h-full" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="#ffffff20" stroke-width="8"/>
+                                <circle id="progress-ring" class="progress-ring-circle" cx="50" cy="50" r="45" fill="none" 
+                                        stroke="currentColor" stroke-width="8" stroke-linecap="round"
+                                        stroke-dasharray="283" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+                            </svg>
+                            
+                            <!-- Timer Text -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <div id="timer-display" class="text-5xl font-bold">25:00</div>
+                                <div id="session-type" class="text-xl mt-2 uppercase tracking-wider">Work Session</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="flex justify-center space-x-4 mb-8">
+                        <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-300 pulse">
+                            <i class="fas fa-play mr-2"></i>Start
+                        </button>
+                        <button id="pause-btn" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-300">
+                            <i class="fas fa-pause mr-2"></i>Pause
+                        </button>
+                        <button id="reset-btn" class="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-full font-medium transition-all duration-300">
+                            <i class="fas fa-redo mr-2"></i>Reset
+                        </button>
+                    </div>
+
+                    <!-- Session Controls -->
+                    <div class="flex justify-center space-x-6">
+                        <button id="prev-session" class="text-white hover:text-gold text-2xl">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button id="skip-session" class="text-white hover:text-gold text-2xl">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="mt-8 bg-black bg-opacity-30 backdrop-blur-lg rounded-2xl p-6 shadow-2xl">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Today's Statistics</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-tomato bg-opacity-30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold" id="completed-sessions">0</div>
+                            <div class="text-sm">Sessions Completed</div>
+                        </div>
+                        <div class="bg-forest bg-opacity-30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold" id="total-focus">0</div>
+                            <div class="text-sm">Minutes Focused</div>
+                        </div>
+                        <div class="bg-blue-500 bg-opacity-30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold" id="breaks-taken">0</div>
+                            <div class="text-sm">Breaks Taken</div>
+                        </div>
+                        <div class="bg-purple-500 bg-opacity-30 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-bold" id="streak">0</div>
+                            <div class="text-sm">Day Streak</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings and Insights -->
+            <div>
+                <!-- Settings Panel -->
+                <div class="bg-black bg-opacity-30 backdrop-blur-lg rounded-2xl p-6 shadow-2xl mb-8">
+                    <h2 class="text-2xl font-bold mb-4">Settings</h2>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block mb-2">Work Duration (minutes)</label>
+                            <input type="range" id="work-duration" min="1" max="60" value="25" class="w-full">
+                            <div class="flex justify-between text-sm mt-1">
+                                <span>1 min</span>
+                                <span id="work-duration-value">25 min</span>
+                                <span>60 min</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block mb-2">Short Break (minutes)</label>
+                            <input type="range" id="short-break" min="1" max="30" value="5" class="w-full">
+                            <div class="flex justify-between text-sm mt-1">
+                                <span>1 min</span>
+                                <span id="short-break-value">5 min</span>
+                                <span>30 min</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block mb-2">Long Break (minutes)</label>
+                            <input type="range" id="long-break" min="1" max="60" value="15" class="w-full">
+                            <div class="flex justify-between text-sm mt-1">
+                                <span>1 min</span>
+                                <span id="long-break-value">15 min</span>
+                                <span>60 min</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block mb-2">Sessions Before Long Break</label>
+                            <input type="range" id="sessions-before-long" min="1" max="10" value="4" class="w-full">
+                            <div class="flex justify-between text-sm mt-1">
+                                <span>1</span>
+                                <span id="sessions-before-long-value">4</span>
+                                <span>10</span>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="auto-start" class="mr-2">
+                                <span>Auto-start next session</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Productivity Insights -->
+                <div class="bg-black bg-opacity-30 backdrop-blur-lg rounded-2xl p-6 shadow-2xl flip-card" id="insights-card">
+                    <div class="flip-card-inner">
+                        <div class="flip-card-front bg-gradient-to-br from-purple-900 to-indigo-800 p-6">
+                            <h2 class="text-2xl font-bold mb-4">Productivity Insights</h2>
+                            <div class="text-center py-8">
+                                <i class="fas fa-chart-line text-5xl mb-4"></i>
+                                <p class="mb-4">Flip to see your productivity insights</p>
+                                <button id="flip-insights" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition">
+                                    View Insights
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flip-card-back bg-gradient-to-br from-indigo-900 to-blue-800 p-6">
+                            <h2 class="text-2xl font-bold mb-4">Your Insights</h2>
+                            <div class="space-y-4">
+                                <div>
+                                    <h3 class="font-bold mb-1">Focus Efficiency</h3>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div id="focus-efficiency-bar" class="bg-green-500 h-2.5 rounded-full" style="width: 75%"></div>
+                                    </div>
+                                    <div class="text-right text-sm mt-1" id="focus-efficiency-text">75%</div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="font-bold mb-1">Session Completion</h3>
+                                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                        <div id="completion-rate-bar" class="bg-blue-500 h-2.5 rounded-full" style="width: 85%"></div>
+                                    </div>
+                                    <div class="text-right text-sm mt-1" id="completion-rate-text">85%</div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="font-bold mb-1">Best Focus Time</h3>
+                                    <div class="flex items-center">
+                                        <i class="fas fa-clock mr-2"></i>
+                                        <span id="best-time">Morning (9 AM - 11 AM)</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="pt-2">
+                                    <button id="flip-insights-back" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition w-full">
+                                        Back to Front
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center text-sm opacity-75">
+            <p>Stay focused. Stay productive. Take breaks when needed.</p>
+        </footer>
+    </div>
+
+    <!-- Audio elements for notifications -->
+    <audio id="work-end-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="break-end-sound" preload="auto">
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-bell-notification-933.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // DOM Elements
+        const timerDisplay = document.getElementById('timer-display');
+        const sessionType = document.getElementById('session-type');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const skipSessionBtn = document.getElementById('skip-session');
+        const prevSessionBtn = document.getElementById('prev-session');
+        const progressRing = document.getElementById('progress-ring');
+        
+        // Settings Elements
+        const workDurationInput = document.getElementById('work-duration');
+        const shortBreakInput = document.getElementById('short-break');
+        const longBreakInput = document.getElementById('long-break');
+        const sessionsBeforeLongInput = document.getElementById('sessions-before-long');
+        const autoStartCheckbox = document.getElementById('auto-start');
+        
+        const workDurationValue = document.getElementById('work-duration-value');
+        const shortBreakValue = document.getElementById('short-break-value');
+        const longBreakValue = document.getElementById('long-break-value');
+        const sessionsBeforeLongValue = document.getElementById('sessions-before-long-value');
+        
+        // Stats Elements
+        const completedSessionsEl = document.getElementById('completed-sessions');
+        const totalFocusEl = document.getElementById('total-focus');
+        const breaksTakenEl = document.getElementById('breaks-taken');
+        const streakEl = document.getElementById('streak');
+        
+        // Insights Elements
+        const flipInsightsBtn = document.getElementById('flip-insights');
+        const flipInsightsBackBtn = document.getElementById('flip-insights-back');
+        const insightsCard = document.getElementById('insights-card');
+        
+        // Audio Elements
+        const workEndSound = document.getElementById('work-end-sound');
+        const breakEndSound = document.getElementById('break-end-sound');
+
+        // App State
+        let state = {
+            isRunning: false,
+            isPaused: false,
+            currentTime: 25 * 60, // 25 minutes in seconds
+            sessionType: 'work', // 'work' or 'break'
+            workDuration: 25 * 60, // 25 minutes
+            shortBreakDuration: 5 * 60, // 5 minutes
+            longBreakDuration: 15 * 60, // 15 minutes
+            sessionsBeforeLongBreak: 4,
+            completedSessions: 0,
+            totalFocusTime: 0,
+            breaksTaken: 0,
+            currentStreak: 0,
+            sessionsCompletedInCycle: 0,
+            timerInterval: null
+        };
+
+        // Initialize the app
+        function init() {
+            updateTimerDisplay();
+            setupEventListeners();
+            updateProgressRing();
+            loadStatsFromStorage();
+            updateStatsDisplay();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            startBtn.addEventListener('click', startTimer);
+            pauseBtn.addEventListener('click', pauseTimer);
+            resetBtn.addEventListener('click', resetTimer);
+            skipSessionBtn.addEventListener('click', skipSession);
+            prevSessionBtn.addEventListener('click', previousSession);
+            
+            workDurationInput.addEventListener('input', updateWorkDuration);
+            shortBreakInput.addEventListener('input', updateShortBreak);
+            longBreakInput.addEventListener('input', updateLongBreak);
+            sessionsBeforeLongInput.addEventListener('input', updateSessionsBeforeLong);
+            
+            flipInsightsBtn.addEventListener('click', () => {
+                insightsCard.classList.add('flipped');
+            });
+            
+            flipInsightsBackBtn.addEventListener('click', () => {
+                insightsCard.classList.remove('flipped');
+            });
+        }
+
+        // Timer Functions
+        function startTimer() {
+            if (!state.isRunning || state.isPaused) {
+                state.isRunning = true;
+                state.isPaused = false;
+                startBtn.innerHTML = '<i class="fas fa-play mr-2"></i>Resume';
+                startBtn.classList.remove('pulse');
+                
+                state.timerInterval = setInterval(() => {
+                    state.currentTime--;
+                    updateTimerDisplay();
+                    updateProgressRing();
+                    
+                    if (state.currentTime <= 0) {
+                        clearInterval(state.timerInterval);
+                        handleSessionEnd();
+                    }
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            if (state.isRunning && !state.isPaused) {
+                state.isPaused = true;
+                clearInterval(state.timerInterval);
+                startBtn.innerHTML = '<i class="fas fa-play mr-2"></i>Resume';
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(state.timerInterval);
+            state.isRunning = false;
+            state.isPaused = false;
+            startBtn.innerHTML = '<i class="fas fa-play mr-2"></i>Start';
+            startBtn.classList.add('pulse');
+            
+            if (state.sessionType === 'work') {
+                state.currentTime = state.workDuration;
+            } else {
+                state.currentTime = state.shortBreakDuration;
+            }
+            
+            updateTimerDisplay();
+            updateProgressRing();
+        }
+
+        function skipSession() {
+            clearInterval(state.timerInterval);
+            switchToNextSession();
+        }
+
+        function previousSession() {
+            // For simplicity, we'll just reset the current session
+            resetTimer();
+        }
+
+        function handleSessionEnd() {
+            // Play appropriate sound
+            if (state.sessionType === 'work') {
+                workEndSound.play();
+                state.completedSessions++;
+                state.totalFocusTime += state.workDuration / 60;
+                state.sessionsCompletedInCycle++;
+                
+                // Check if it's time for a long break
+                if (state.sessionsCompletedInCycle >= state.sessionsBeforeLongBreak) {
+                    state.sessionType = 'break';
+                    state.currentTime = state.longBreakDuration;
+                    state.sessionsCompletedInCycle = 0;
+                } else {
+                    state.sessionType = 'break';
+                    state.currentTime = state.shortBreakDuration;
+                }
+            } else {
+                breakEndSound.play();
+                state.breaksTaken++;
+                
+                // Switch back to work session
+                state.sessionType = 'work';
+                state.currentTime = state.workDuration;
+            }
+            
+            updateSessionTypeDisplay();
+            updateTimerDisplay();
+            updateProgressRing();
+            saveStatsToStorage();
+            updateStatsDisplay();
+            
+            // Auto-start next session if enabled
+            if (autoStartCheckbox.checked) {
+                setTimeout(startTimer, 2000);
+            } else {
+                state.isRunning = false;
+                startBtn.innerHTML = '<i class="fas fa-play mr-2"></i>Start';
+                startBtn.classList.add('pulse');
+            }
+        }
+
+        function switchToNextSession() {
+            if (state.sessionType === 'work') {
+                state.sessionType = 'break';
+                // Determine if it should be a long break
+                if (state.sessionsCompletedInCycle + 1 >= state.sessionsBeforeLongBreak) {
+                    state.currentTime = state.longBreakDuration;
+                } else {
+                    state.currentTime = state.shortBreakDuration;
+                }
+            } else {
+                state.sessionType = 'work';
+                state.currentTime = state.workDuration;
+            }
+            
+            updateSessionTypeDisplay();
+            updateTimerDisplay();
+            updateProgressRing();
+            state.isRunning = false;
+            state.isPaused = false;
+            startBtn.innerHTML = '<i class="fas fa-play mr-2"></i>Start';
+            startBtn.classList.add('pulse');
+        }
+
+        // Update Functions
+        function updateTimerDisplay() {
+            const minutes = Math.floor(state.currentTime / 60);
+            const seconds = state.currentTime % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function updateSessionTypeDisplay() {
+            if (state.sessionType === 'work') {
+                sessionType.textContent = 'Work Session';
+                sessionType.className = 'text-xl mt-2 uppercase tracking-wider text-tomato';
+                document.documentElement.style.setProperty('--ring-color', '#ff6347');
+            } else {
+                if (state.sessionsCompletedInCycle + 1 >= state.sessionsBeforeLongBreak) {
+                    sessionType.textContent = 'Long Break';
+                } else {
+                    sessionType.textContent = 'Short Break';
+                }
+                sessionType.className = 'text-xl mt-2 uppercase tracking-wider text-forest';
+                document.documentElement.style.setProperty('--ring-color', '#228B22');
+            }
+        }
+
+        function updateProgressRing() {
+            let totalTime;
+            if (state.sessionType === 'work') {
+                totalTime = state.workDuration;
+            } else {
+                if (state.sessionsCompletedInCycle + 1 >= state.sessionsBeforeLongBreak) {
+                    totalTime = state.longBreakDuration;
+                } else {
+                    totalTime = state.shortBreakDuration;
+                }
+            }
+            
+            const progress = 1 - (state.currentTime / totalTime);
+            const circumference = 2 * Math.PI * 45; // 45 is the radius
+            const offset = circumference * (1 - progress);
+            
+            progressRing.style.strokeDasharray = circumference;
+            progressRing.style.strokeDashoffset = offset;
+            
+            // Update ring color based on session type
+            if (state.sessionType === 'work') {
+                progressRing.setAttribute('stroke', '#ff6347'); // Tomato color
+            } else {
+                progressRing.setAttribute('stroke', '#228B22'); // Forest green
+            }
+        }
+
+        function updateWorkDuration() {
+            state.workDuration = workDurationInput.value * 60;
+            workDurationValue.textContent = `${workDurationInput.value} min`;
+            if (state.sessionType === 'work' && !state.isRunning) {
+                state.currentTime = state.workDuration;
+                updateTimerDisplay();
+                updateProgressRing();
+            }
+        }
+
+        function updateShortBreak() {
+            state.shortBreakDuration = shortBreakInput.value * 60;
+            shortBreakValue.textContent = `${shortBreakInput.value} min`;
+            if (state.sessionType === 'break' && !state.isRunning && 
+                state.sessionsCompletedInCycle + 1 < state.sessionsBeforeLongBreak) {
+                state.currentTime = state.shortBreakDuration;
+                updateTimerDisplay();
+                updateProgressRing();
+            }
+        }
+
+        function updateLongBreak() {
+            state.longBreakDuration = longBreakInput.value * 60;
+            longBreakValue.textContent = `${longBreakInput.value} min`;
+            if (state.sessionType === 'break' && !state.isRunning && 
+                state.sessionsCompletedInCycle + 1 >= state.sessionsBeforeLongBreak) {
+                state.currentTime = state.longBreakDuration;
+                updateTimerDisplay();
+                updateProgressRing();
+            }
+        }
+
+        function updateSessionsBeforeLong() {
+            state.sessionsBeforeLongBreak = parseInt(sessionsBeforeLongInput.value);
+            sessionsBeforeLongValue.textContent = sessionsBeforeLongInput.value;
+        }
+
+        // Stats Functions
+        function updateStatsDisplay() {
+            completedSessionsEl.textContent = state.completedSessions;
+            totalFocusEl.textContent = Math.floor(state.totalFocusTime);
+            breaksTakenEl.textContent = state.breaksTaken;
+            streakEl.textContent = state.currentStreak;
+            
+            // Update insights
+            const efficiency = Math.min(100, Math.floor((state.completedSessions / (state.completedSessions + state.breaksTaken)) * 100));
+            document.getElementById('focus-efficiency-bar').style.width = `${efficiency}%`;
+            document.getElementById('focus-efficiency-text').textContent = `${efficiency}%`;
+            
+            const completionRate = Math.min(100, Math.floor((state.completedSessions / Math.max(1, state.completedSessions + state.breaksTaken)) * 100));
+            document.getElementById('completion-rate-bar').style.width = `${completionRate}%`;
+            document.getElementById('completion-rate-text').textContent = `${completionRate}%`;
+        }
+
+        function saveStatsToStorage() {
+            const stats = {
+                completedSessions: state.completedSessions,
+                totalFocusTime: state.totalFocusTime,
+                breaksTaken: state.breaksTaken,
+                currentStreak: state.currentStreak,
+                lastUpdated: new Date().toDateString()
+            };
+            localStorage.setItem('pomodoroStats', JSON.stringify(stats));
+        }
+
+        function loadStatsFromStorage() {
+            const savedStats = localStorage.getItem('pomodoroStats');
+            if (savedStats) {
+                const stats = JSON.parse(savedStats);
+                // Reset daily stats if it's a new day
+                if (stats.lastUpdated !== new Date().toDateString()) {
+                    stats.completedSessions = 0;
+                    stats.totalFocusTime = 0;
+                    stats.breaksTaken = 0;
+                    stats.lastUpdated = new Date().toDateString();
+                }
+                state.completedSessions = stats.completedSessions;
+                state.totalFocusTime = stats.totalFocusTime;
+                state.breaksTaken = stats.breaksTaken;
+                state.currentStreak = stats.currentStreak;
+            }
+        }
+
+        // Initialize the app when the page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
